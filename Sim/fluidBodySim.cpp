@@ -8,10 +8,49 @@
     \author Copyright 2009 Dr. Michael Jason Gourlay; All rights reserved.
 */
 
+#include <float.h>
+
+#include <xmmintrin.h>  // SSE intrinsics
+
 #include "Core/Performance/perf.h"
 #include "Sim/Vorton/vorticityDistribution.h"
 
 #include "fluidBodySim.h"
+
+#if USE_TBB
+    /*! \brief Function object to collide passive tracer particles with rigid bodies
+    */
+    class FluidBodySim_CollideTracers_TBB
+    {
+            FluidBodySim    *   mFluidBodySim  ;    ///< Address of FluidBodySim object containing tracers and rigid bodies
+            const RbSphere  &   mRbSphere      ;    ///< Reference to RbSphere object colliding with tracers
+        public:
+            FluidBodySim_CollideTracers_TBB( FluidBodySim * pFluidBodySim , RbSphere & rRbSphere )
+                : mFluidBodySim( pFluidBodySim )
+                , mRbSphere( rRbSphere )
+            {}
+
+            // Special "map" copy constructor used by TBB
+            FluidBodySim_CollideTracers_TBB( FluidBodySim_CollideTracers_TBB & that , tbb::split )
+                : mFluidBodySim( that.mFluidBodySim )
+                , mRbSphere( that.mRbSphere )
+                , mImpulseOnBody( that.mImpulseOnBody )
+            {}
+
+            void operator() ( const tbb::blocked_range<size_t> & r )
+            {   // Compute collisions for a subset of tracers.
+                mFluidBodySim->CollideTracersSlice( mRbSphere , mImpulseOnBody , r.begin() , r.end() ) ;
+            }
+
+            void join( const FluidBodySim_CollideTracers_TBB & other )
+            {   // Reduce the results of 2 threads
+                mImpulseOnBody += other.mImpulseOnBody ;
+            }
+            Vec3                mImpulseOnBody ;    ///< Impulse applied by tracers to rigid body
+    } ;
+#endif
+
+
 
 
 /*! \brief Select boundary condition handling scheme
@@ -147,6 +186,61 @@ void FluidBodySim::RemoveEmbeddedParticles( void )
 
 
 
+/*! \brief Collide tracer particles with rigid bodies
+
+    \param rSphere - reference to a spherical rigid body
+
+    \param iPclStart - starting index of tracer particle to process.
+        iPclStart must be less than the total number of tracer particles.
+
+    \param iPclEnd - one past ending index of tracer particle to process.
+        iPclStart must be less than or equal to the total number of tracer particles.
+
+    \see SolveBoundaryConditions
+*/
+void FluidBodySim::CollideTracersSlice( const RbSphere & rSphere , Vec3 & rImpulseOnBody , const size_t iPclStart , const size_t iPclEnd )
+{
+    //ASSERT( iPclStart <  mVortonSim.GetTracers().Size() ) ;
+    //ASSERT( iPclEnd   <= mVortonSim.GetTracers().Size() ) ;
+
+#if FLOW_AFFECTS_BODY
+    const float &  rMassPerParticle = mVortonSim.GetMassPerParticle() ;
+#endif
+
+    Vec3 impulseOnBody( 0.0f , 0.0f , 0.0f ) ; // Impulse particles apply to rigid body
+
+    Particle * pTracers = & mVortonSim.GetTracers()[ 0 ] ;
+    // Collide tracers with rigid body.
+    for( size_t uTracer = iPclStart ; uTracer < iPclEnd ; ++ uTracer )
+    {   // For each tracer in the simulation...
+        _mm_prefetch( (char*)( & pTracers[ uTracer + 5 ] ) , _MM_HINT_T0 ) ;
+        Particle &  rTracer         = pTracers[ uTracer ] ;
+        const Vec3  vSphereToTracer = rTracer.mPosition - rSphere.mPosition ;   // vector from body center to tracer
+        const float fSphereToTracer = vSphereToTracer.Magnitude() ;
+        const float fCombinedRadii  = rTracer.mSize + rSphere.mRadius ;
+        if( fSphereToTracer < fCombinedRadii )
+        {   // Tracer is colliding with body.
+            // Project tracer to outside of body.
+            // This places the particle on the body surface.
+            const float distRescale         = ( rSphere.mRadius + rTracer.mSize ) * ( 1.0f + FLT_EPSILON ) / fSphereToTracer ;
+            const Vec3  vDisplacementNew    = vSphereToTracer * distRescale ;
+            rTracer.mPosition = rSphere.mPosition + vDisplacementNew ;
+            // Transfer linear momentum between vorton and body.
+            const Vec3  vVelDueToRotation   = rSphere.mAngVelocity ^ vDisplacementNew ; // linear velocity, at vorton new position, due to body rotation
+            const Vec3  vVelNew             = rSphere.mVelocity + vVelDueToRotation ;   // Total linear velocity of vorton at its new position, due to sticking to body
+            const Vec3  vVelChange          = rTracer.mVelocity - vVelNew ;             // (negative of) total linear velocity change applied to vorton
+            #if FLOW_AFFECTS_BODY
+            impulseOnBody += vVelChange * rMassPerParticle  ;
+            #endif
+            rTracer.mVelocity = vVelNew ;   // If same tracer is involved in another contact before advection, this will conserve momentum.
+        }
+    }
+    rImpulseOnBody = impulseOnBody ;
+}
+
+
+
+
 /*! \brief Collide particles with rigid bodies
 
     This uses a simplified form of "penalty" scheme
@@ -189,9 +283,9 @@ void FluidBodySim::RemoveEmbeddedParticles( void )
 */
 void FluidBodySim::SolveBoundaryConditions( void )
 {
-    const size_t numBodies        = mSpheres.Size() ;
-    const size_t numVortons       = mVortonSim.GetVortons().Size() ;
-    const size_t numTracers       = mVortonSim.GetTracers().Size() ;
+    const size_t    numBodies   = mSpheres.Size() ;
+    const size_t    numVortons  = mVortonSim.GetVortons().Size() ;
+    const size_t    numTracers  = mVortonSim.GetTracers().Size() ;
 
 #if FLOW_AFFECTS_BODY
     const float &  rMassPerParticle = mVortonSim.GetMassPerParticle() ;
@@ -204,7 +298,7 @@ void FluidBodySim::SolveBoundaryConditions( void )
         // Collide vortons with rigid body.
         for( unsigned uVorton = 0 ; uVorton < numVortons ; ++ uVorton )
         {   // For each vorton in the simulation...
-            Vorton & rVorton = mVortonSim.GetVortons()[ uVorton ] ;
+            Vorton &    rVorton             = mVortonSim.GetVortons()[ uVorton ] ;
             const Vec3  vSphereToVorton     = rVorton.mPosition - rSphere.mPosition ;   // vector from body center to vorton
             const float fSphereToVorton     = vSphereToVorton.Magnitude() ;
             const Vec3  vSphereToVortonDir  = vSphereToVorton / fSphereToVorton ;
@@ -234,6 +328,12 @@ void FluidBodySim::SolveBoundaryConditions( void )
                 const Vec3 vContactPtWorld          = vContactPtRelBody + rSphere.mPosition ;
 
                 // Compute velocity of body at contact point.
+                // NOTE: Handling rigid body rotation in this way is INCORRECT; it assumes the rotational motion of the body
+                //      has a mostly local effect, that is, that the vorticity flux resulting from shears
+                //      from rotation is the same as vorticity flux from shears due to translation.  That is incorrect.
+                //      It would be somewhat more defensible to treat the rigid body as a solid vortex,
+                //      whose vorticity diffuses into the flow at a rate determined by viscosity and shear stresses.
+                //      In fact, the vorticity generated using this scheme is roughly opposite what it should be.
                 const Vec3 vVelDueToRotAtConPt      = rSphere.mAngVelocity ^ vContactPtRelBody ; // linear velocity, of body at contact point, due to its own rotation
                 const Vec3 vVelBodyAtConPt          = rSphere.mVelocity + vVelDueToRotAtConPt    ; // Total linear velocity of body at contact point
 
@@ -385,29 +485,19 @@ void FluidBodySim::SolveBoundaryConditions( void )
             }
         }
 
-        // Collide tracers with rigid body.
-        for( unsigned uTracer = 0 ; uTracer < numTracers ; ++ uTracer )
-        {   // For each tracer in the simulation...
-            Particle & rTracer = mVortonSim.GetTracers()[ uTracer ] ;
-            const Vec3  vSphereToTracer = rTracer.mPosition - rSphere.mPosition ;   // vector from body center to tracer
-            const float fSphereToTracer = vSphereToTracer.Magnitude() ;
-            if( fSphereToTracer < ( rTracer.mSize + rSphere.mRadius ) )
-            {   // Tracer is colliding with body.
-                // Project tracer to outside of body.
-                // This places the particle on the body surface.
-                const float distRescale         = ( rSphere.mRadius + rTracer.mSize ) * ( 1.0f + FLT_EPSILON ) / fSphereToTracer ;
-                const Vec3  vDisplacementNew    = vSphereToTracer * distRescale ;
-                rTracer.mPosition = rSphere.mPosition + vDisplacementNew ;
-                // Transfer linear momentum between vorton and body.
-                const Vec3  vVelDueToRotation   = rSphere.mAngVelocity ^ vDisplacementNew ; // linear velocity, at vorton new position, due to body rotation
-                const Vec3  vVelNew             = rSphere.mVelocity + vVelDueToRotation ;   // Total linear velocity of vorton at its new position, due to sticking to body
-                const Vec3  vVelChange          = rTracer.mVelocity - vVelNew ;             // (negative of) total linear velocity change applied to vorton
-                #if FLOW_AFFECTS_BODY
-                rSphere.ApplyImpulse( vVelChange * rMassPerParticle ) ;                     // Apply linear impulse to body
-                #endif
-                rTracer.mVelocity = vVelNew ;   // If same tracer is involved in another contact before advection, this will conserve momentum.
-            }
-        }
+        Vec3 vImpulseOnBody ; // Linear impulse applied by tracers to rigid body
+#if 0 && USE_TBB
+        // Estimate grain size based on size of problem and number of processors.
+        const size_t grainSize =  MAX2( 1 , numTracers / gNumberOfProcessors ) ;
+        // Compute tracer-body collisions using multiple threads.
+        FluidBodySim_CollideTracers_TBB ct( this , rSphere ) ;
+        parallel_reduce( tbb::blocked_range<size_t>( 0 , numTracers , grainSize ) , ct ) ;
+        vImpulseOnBody = ct.mImpulseOnBody ;
+#else
+        CollideTracersSlice( rSphere , vImpulseOnBody , 0 , numTracers ) ;
+#endif
+        rSphere.ApplyImpulse( vImpulseOnBody ) ; // Apply linear impulse from tracers to rigid body
+
     }
 }
 

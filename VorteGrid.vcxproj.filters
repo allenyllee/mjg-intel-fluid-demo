@@ -6,28 +6,28 @@
       <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="Source Files\Space">
-      <UniqueIdentifier>{f0d8126b-51e8-4b6f-a7a1-b4182c4a7e1c}</UniqueIdentifier>
+      <UniqueIdentifier>{9ac8ea9c-22a7-45a0-8bd5-559d3f9dd5fc}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Sim">
-      <UniqueIdentifier>{3cb276f4-d11c-4d07-8a71-8bd0401b8e91}</UniqueIdentifier>
+      <UniqueIdentifier>{c530b771-dcc5-4aee-aacf-8ac314337684}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Sim\Vorton">
-      <UniqueIdentifier>{7fa1f186-7578-45c8-a569-adfa702c18ea}</UniqueIdentifier>
+      <UniqueIdentifier>{10895a02-efd3-41f3-90c8-ec55cac76a21}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Sim\RigidBody">
-      <UniqueIdentifier>{904f1275-578f-4415-b959-d02f661c030e}</UniqueIdentifier>
+      <UniqueIdentifier>{1afafc00-34b4-4dc5-87c8-9f42dd9aac36}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Render">
-      <UniqueIdentifier>{3e27b25e-e5f2-4d98-8e94-ce5b3a00c15d}</UniqueIdentifier>
+      <UniqueIdentifier>{dad5268b-6d77-45e5-be1f-4ded314b88e0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Core">
-      <UniqueIdentifier>{0001b8cf-7f67-40bf-9110-ff278f26b3af}</UniqueIdentifier>
+      <UniqueIdentifier>{2e8e0bd3-ec5d-461e-8bbf-0d789eae39e0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Core\Math">
-      <UniqueIdentifier>{bcc014d5-cf73-4fb8-b5e2-9289e43f9a53}</UniqueIdentifier>
+      <UniqueIdentifier>{1e960912-3f85-4367-97b1-c3615c07c1a3}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\Core\Performance">
-      <UniqueIdentifier>{8ca83919-d00b-425d-abd3-135bd4e78d00}</UniqueIdentifier>
+      <UniqueIdentifier>{65a27d50-4c9f-4256-bd66-720dc25136ab}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -12,8 +12,26 @@
 
 #include "useTbb.h"
 
+// "Fancy" particles are lit, shaded particles that take a lot of extra time to render.
+// They also require special lighting setup.
+// Normally, this demo should leave this disabled.
 #define USE_FANCY_PARTICLES 0
 
+// Vertex buffer objects facilitate directly filling vertex buffers into GPU-owned memory
+// bypassing an intermediate CPU-owned buffer.  VBO's are therefore much faster.
+// But not all versions of OpenGL support VBO's.
+// Support for VBO is detected and selected at runtime.
+#define USE_VERTEX_BUFFER_OBJECT 1
+
+// Enabling separate VBO's keeps particle vertex position and texture coordinates in separate buffers.
+// This allows for faster vertex buffer filling.
+// In this demo, support for separate VBO's is only implemented for VBO's,
+// but technically using separate arrays could also be done with old-style vertex arrays.
+#if USE_VERTEX_BUFFER_OBJECT
+#define USE_SEPARATE_VBOS 1
+#endif
+
+// Macro to provide the offset, in bytes, of a member variable within a struct or class.
 #define OFFSET_OF_MEMBER( rObject , rMember ) (((char*)(&rObject.rMember))-((char*)&rObject))
 
 /*! \brief Class to render vortex particles
@@ -38,14 +56,32 @@ class ParticleRenderer
         void SetParticleData( const char * pParticleData ) { mParticleData = pParticleData ; }
 
     private:
-        const char *                mParticleData           ;   ///< Dynamic array of particles
-        size_t                      mStride                 ;   ///< Number of bytes between particles
-        size_t                      mOffsetToAngVel         ;   ///< Number of bytes to angular velocity
-        size_t                      mOffsetToSize           ;   ///< Number of bytes to size
-        unsigned char *             mVertexBuffer           ;   ///< Address of vertex buffer
-        size_t                      mVertexBufferCapacity   ;   ///< number of vertices this buffer can hold
-        ParticleIndex       *       mIndices                ;   ///< buffer used to sort particles
-        size_t                      mIndicesCapacity        ;   ///< number of elements in mIndices
+        typedef unsigned int        COLOR_UBYTES                ;
+        typedef unsigned char *     VERTEX_BUFFER_POINTER_TYPE  ;
+        typedef WORD *              INDEX_BUFFER_POINTER_TYPE   ;
+
+        const char *                mParticleData               ;   ///< Dynamic array of particles
+        size_t                      mStride                     ;   ///< Number of bytes between particles
+        size_t                      mOffsetToAngVel             ;   ///< Number of bytes to angular velocity
+        size_t                      mOffsetToSize               ;   ///< Number of bytes to size
+        VERTEX_BUFFER_POINTER_TYPE  mVertexBuffer               ;   ///< Address of vertex buffer
+        size_t                      mVertexBufferCapacity       ;   ///< number of vertices this buffer can hold
+        ParticleIndex       *       mIndices                    ;   ///< buffer used to sort particles
+        size_t                      mIndicesCapacity            ;   ///< number of elements in mIndices
+
+    #if USE_SEPARATE_VBOS
+        VERTEX_BUFFER_POINTER_TYPE  mTexCoordBuffer             ;   ///< Address of texture coordinate buffer
+        bool                        mVertexBufferGrew           ;   ///< Did vertex buffer grow?
+    #endif
+
+    #if USE_VERTEX_BUFFER_OBJECT
+        #if USE_SEPARATE_VBOS
+            static const size_t NUM_VBO_MAX = 2 ;
+        #else
+            static const size_t NUM_VBO_MAX = 1 ;
+        #endif
+        GLuint                      mVboNames[ NUM_VBO_MAX ]    ;   ///< Identifer for vertex buffer object
+    #endif
 
         ParticleRenderer( const ParticleRenderer & re) ;                // Disallow copy construction.  See comments in AttributedOld.
         ParticleRenderer & operator=( const ParticleRenderer & re ) ;   // Disallow assignment  See comments in AttributedOld.

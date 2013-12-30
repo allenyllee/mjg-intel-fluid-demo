@@ -85,7 +85,7 @@ class UniformGridGeometry
 
             \see Clear, DefineShape
         */
-        UniformGridGeometry( unsigned uNumElements , const Vec3 & vMin , const Vec3 & vMax , bool bPowerOf2 )
+        UniformGridGeometry( size_t uNumElements , const Vec3 & vMin , const Vec3 & vMax , bool bPowerOf2 )
         {
             DefineShape( uNumElements , vMin , vMax , bPowerOf2 ) ;
         }
@@ -269,15 +269,34 @@ class UniformGridGeometry
             \note Derived class defines the actual contents array.
 
         */
-        void IndicesOfPosition( unsigned indices[3] , const Vec3 & vPosition ) const
+        void IndicesOfPosition( unsigned indices[4] , const Vec3 & vPosition ) const
         {
             // Notice the pecular test here.  vPosition may lie slightly outside of the extent give by vMax.
             // Review the geometry described in the class header comment.
             Vec3 vPosRel( vPosition - GetMinCorner() ) ;   // position of given point relative to container region
             Vec3 vIdx( vPosRel.x * GetCellsPerExtent().x , vPosRel.y * GetCellsPerExtent().y , vPosRel.z * GetCellsPerExtent().z ) ;
+        #if 0   // Original code
             indices[0] = unsigned( vIdx.x ) ;
             indices[1] = unsigned( vIdx.y ) ;
             indices[2] = unsigned( vIdx.z ) ;
+        #elif 1 // Optimization 1: change control word once for all 3 conversions
+            const WORD OldCtrlWord = Changex87FpToTrunc() ;
+            indices[0] = StoreFloatAsInt( vIdx.x ) ;
+            indices[1] = StoreFloatAsInt( vIdx.y ) ;
+            indices[2] = StoreFloatAsInt( vIdx.z ) ;
+            Setx87ControlWord( OldCtrlWord ) ;
+        #elif 0 // Optimization 2: Use SSE instructions that do not require 16-byte alignment
+            _asm {
+                movdqu      xmm0    , vIdx
+                cvttps2dq   xmm0    , xmm0
+                movdqu      indices , xmm0
+            }
+        #elif 0 // Optimization 3: Use SSE instructions that assume 16-byte alignment
+            _asm {
+                cvttps2dq   xmm0    , vIdx
+                movdqa      indices , xmm0
+            }
+        #endif
         }
 
 
@@ -294,7 +313,7 @@ class UniformGridGeometry
         */
         unsigned    OffsetOfPosition( const Vec3 & vPosition )
         {
-            unsigned indices[3] ;
+            unsigned indices[4] ;
             IndicesOfPosition( indices , vPosition ) ;
             const unsigned offset = indices[0] + GetNumPoints( 0 ) * ( indices[1] + GetNumPoints( 1 ) * indices[2] ) ;
             return offset ;
@@ -564,7 +583,7 @@ template <class ItemT> class UniformGrid : public UniformGridGeometry
         */
         void Interpolate( ItemT & vResult , const Vec3 & vPosition ) const
         {
-            unsigned        indices[3] ; // Indices of grid cell containing position.
+            unsigned        indices[4] ; // Indices of grid cell containing position.
             IndicesOfPosition( indices , vPosition ) ;
             Vec3            vMinCorner ;
             PositionFromIndices( vMinCorner , indices ) ;
@@ -580,14 +599,14 @@ template <class ItemT> class UniformGrid : public UniformGridGeometry
             const unsigned  offsetX1Y0Z1  = offsetX0Y0Z0 + numXY + 1 ;
             const unsigned  offsetX0Y1Z1  = offsetX0Y0Z0 + numXY + GetNumPoints(0) ;
             const unsigned  offsetX1Y1Z1  = offsetX0Y0Z0 + numXY + GetNumPoints(0) + 1 ;
-            vResult = oneMinusTween.x * oneMinusTween.y * oneMinusTween.z * (*this)[ offsetX0Y0Z0 ]
-                    +         tween.x * oneMinusTween.y * oneMinusTween.z * (*this)[ offsetX1Y0Z0 ]
-                    + oneMinusTween.x *         tween.y * oneMinusTween.z * (*this)[ offsetX0Y1Z0 ]
-                    +         tween.x *         tween.y * oneMinusTween.z * (*this)[ offsetX1Y1Z0 ]
-                    + oneMinusTween.x * oneMinusTween.y *         tween.z * (*this)[ offsetX0Y0Z1 ]
-                    +         tween.x * oneMinusTween.y *         tween.z * (*this)[ offsetX1Y0Z1 ]
-                    + oneMinusTween.x *         tween.y *         tween.z * (*this)[ offsetX0Y1Z1 ]
-                    +         tween.x *         tween.y *         tween.z * (*this)[ offsetX1Y1Z1 ] ;
+            vResult =     ( ( oneMinusTween.x * (*this)[ offsetX0Y0Z0 ]
+                            +         tween.x * (*this)[ offsetX1Y0Z0 ] ) * oneMinusTween.y
+                          + ( oneMinusTween.x * (*this)[ offsetX0Y1Z0 ]
+                            +         tween.x * (*this)[ offsetX1Y1Z0 ] ) * tween.y        ) * oneMinusTween.z
+                        + ( ( oneMinusTween.x * (*this)[ offsetX0Y0Z1 ]
+                            +         tween.x * (*this)[ offsetX1Y0Z1 ] ) * oneMinusTween.y
+                          + ( oneMinusTween.x * (*this)[ offsetX0Y1Z1 ]
+                            +         tween.x * (*this)[ offsetX1Y1Z1 ] ) * tween.y        ) * tween.z ;
         }
 
 
@@ -597,7 +616,7 @@ template <class ItemT> class UniformGrid : public UniformGridGeometry
         */
         void Insert( const Vec3 & vPosition , const ItemT & item )
         {
-            unsigned        indices[3] ; // Indices of grid cell containing position.
+            unsigned        indices[4] ; // Indices of grid cell containing position.
             IndicesOfPosition( indices , vPosition ) ;
             Vec3            vMinCorner ;
             PositionFromIndices( vMinCorner , indices ) ;

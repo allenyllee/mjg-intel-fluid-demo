@@ -37,7 +37,7 @@ class VortonSim
         */
         VortonSim( float viscosity = 0.0f , float density = 1.0f )
             : mMinCorner(FLT_MAX,FLT_MAX,FLT_MAX)
-            , mMaxCorner( -mMinCorner )
+            , mMaxCorner( - mMinCorner )
             , mViscosity( viscosity )
             , mCirculationInitial( 0.0f , 0.0f , 0.0f )
             , mLinearImpulseInitial( 0.0f , 0.0f , 0.0f )
@@ -76,6 +76,9 @@ class VortonSim
     private:
         void    AssignVortonsFromVorticity( UniformGrid< Vec3 > & vortGrid ) ;
         void    ConservedQuantities( Vec3 & vCirculation , Vec3 & vLinearImpulse ) const ;
+        void    FindBoundingBoxVortonsSlice( size_t izStart , size_t izEnd ) ;
+        void    FindBoundingBoxTracersSlice( size_t izStart , size_t izEnd ) ;
+        inline void UpdateBoundingBox( const Vec3 & vPoint ) ;
         void    FindBoundingBox( void ) ;
         void    MakeBaseVortonGrid( void ) ;
         void    AggregateClusters( unsigned uParentLayer ) ;
@@ -108,8 +111,10 @@ class VortonSim
         Vector< Particle >      mTracers                ;   ///< Passive tracer particles
 
     #if USE_TBB
-        friend class VortonSim_ComputeVelocityGrid_TBB ;
-        friend class VortonSim_AdvectTracers_TBB ;
+        friend class VortonSim_ComputeVelocityGrid_TBB      ; ///< Multi-threading helper class
+        friend class VortonSim_AdvectTracers_TBB            ; ///< Multi-threading helper class
+        friend class VortonSim_FindBoundingBoxVortons_TBB   ; ///< Multi-threading helper class
+        friend class VortonSim_FindBoundingBoxTracers_TBB   ; ///< Multi-threading helper class
     #endif
 } ;
 

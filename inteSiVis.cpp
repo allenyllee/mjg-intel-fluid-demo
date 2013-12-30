@@ -53,6 +53,11 @@ static const float gScale = 1.0f ;
 
 bool gPrintProfileData = false ;
 
+#if defined( PROFILE )
+static int       sFrameCount    = 0     ;   // In profile builds, run for a fixed number of frames
+static const int sFrameCountMax = 300   ;   // In profile builds, run for a fixed number of frames
+#endif
+
 // Functions --------------------------------------------------------------
 
 
@@ -82,7 +87,7 @@ InteSiVis::InteSiVis( float viscosity , float density )
     sInstance = this ;
     mMouseButtons[0] = mMouseButtons[1] = mMouseButtons[2] = 0 ;
 
-    InitialConditions( 1 ) ;
+    InitialConditions( 2 ) ;
 }
 
 
@@ -170,6 +175,8 @@ void InteSiVis::InitialConditions( unsigned ic )
     unsigned                numTracersPer   = 3 ;
 
     Vector< Vorton > & vortons = mFluidBodySim.GetVortonSim().GetVortons() ;
+
+    srand( 1 ) ;    // Seed pseudo-random number generator to make results repeatable.
 
     switch( ic )
     {   // Switch on initial conditions
@@ -329,6 +336,19 @@ static void GlutDisplayCallback(void)
     QUERY_PERFORMANCE_ENTER ;
     glutSwapBuffers() ;
     QUERY_PERFORMANCE_EXIT( InteSiVis_Render_SwapBuffers ) ;
+
+#if PROFILE > 1
+    ++ sFrameCount ;
+    if( sFrameCount == sFrameCountMax )
+    {   // Reached last frame, so enable profile reporting
+        gPrintProfileData = true ;
+    }
+    else if( sFrameCount > sFrameCountMax )
+    {   // Reached maximum number of frames, so exit.
+        fprintf( stderr , "Benchmark DONE: " __DATE__ " " __TIME__ "\n\n" ) ;
+        exit( 0 ) ;
+    }
+#endif
 
     QUERY_PERFORMANCE_EXIT( InteSiVis_Render ) ;
 }
@@ -526,6 +546,30 @@ void GlutEntryHandler( int state )
 
 
 
+typedef BOOL (APIENTRY *PFNWGLSWAPINTERVALFARPROC)( int );
+PFNWGLSWAPINTERVALFARPROC wglSwapIntervalEXT = 0;
+
+void setVSync(int interval=1)
+{
+    const char * extensions = (char*) glGetString( GL_EXTENSIONS );
+
+    if( strstr( extensions, "WGL_EXT_swap_control" ) == 0 )
+    {   // Your computer does NOT support WGL_EXT_swap_control extension.
+        return ;
+    }
+    else
+    {
+        wglSwapIntervalEXT = (PFNWGLSWAPINTERVALFARPROC)wglGetProcAddress( "wglSwapIntervalEXT" );
+        if( wglSwapIntervalEXT )
+        {   // Set the vsync mode
+            wglSwapIntervalEXT(interval);
+        }
+    }
+}
+
+
+
+
 /*! \brief Initialize display device
 */
 void InteSiVis::InitDevice( int * pArgc , char ** argv )
@@ -561,6 +605,8 @@ void InteSiVis::InitDevice( int * pArgc , char ** argv )
     // Set the current window to the main window
     glutSetWindow( mRenderWindow ) ;
 
+    setVSync( 0 ) ;
+
     glutMainLoop() ; // Relinquish control to GLUT.  This never returns.
 }
 
@@ -569,6 +615,18 @@ void InteSiVis::InitDevice( int * pArgc , char ** argv )
 
 int main( int argc , char ** argv )
 {
+    fprintf( stderr , "Benchmark: " __DATE__ " " __TIME__ "\n" ) ;
+
+    //XMM_SetFlushToZeroDenormalAreZero() ;
+    //Setx87Precision( PRECISION_SINGLE ) ;
+
+#if PROFILE
+    {   // Redirect stderr to a file to collect profile data.
+        freopen( "profile.log" , "aa" , stderr ) ;
+        fprintf( stderr , "Benchmark: " __DATE__ " " __TIME__ "\n" ) ;
+    }
+#endif
+
     InteSiVis inteSiVis( 0.05f , 1.0f ) ;
     inteSiVis.InitDevice( & argc , argv ) ;
     return 0 ;

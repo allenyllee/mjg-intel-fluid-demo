@@ -51,8 +51,11 @@
 
     #include "tbb/task_scheduler_init.h"
     #include "tbb/parallel_for.h"
+    #include "tbb/parallel_reduce.h"
     #include "tbb/blocked_range.h"
     #include "tbb/tick_count.h"
 #endif
+
+extern unsigned gNumberOfProcessors ;  ///< Number of processors this machine has.
 
 #endif

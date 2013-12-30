@@ -46,10 +46,15 @@ class FluidBodySim
         FluidBodySim & operator=( const FluidBodySim & that ) ; // Disallow assignment
 
         void RemoveEmbeddedParticles( void ) ;
+        void CollideTracersSlice( const RbSphere & rSphere , Vec3 & rImpulseOnBody , size_t iPclStart , size_t iPclEnd ) ;
         void SolveBoundaryConditions( void ) ;
 
         VortonSim           mVortonSim ;
         Vector< RbSphere >  mSpheres   ;
+
+        #if USE_TBB
+        friend class FluidBodySim_CollideTracers_TBB ;
+        #endif
 } ;
 
 // Public variables --------------------------------------------------------------

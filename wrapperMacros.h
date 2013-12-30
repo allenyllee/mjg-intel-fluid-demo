@@ -52,6 +52,17 @@ using namespace std ;
 static const float PI     = 3.1415926535897932384626433832795f ;
 static const float TWO_PI = 2.0f * PI ;
 
+
+// Macros --------------------------------------------------------------
+
+#if ! defined( DEBUG_ONLY )
+#if defined( _DEBUG )
+#define DEBUG_ONLY( expr ) expr
+#else
+#define DEBUG_ONLY( expr )
+#endif
+#endif
+
 // Types --------------------------------------------------------------
 // Public variables --------------------------------------------------------------
 // Public functions --------------------------------------------------------------

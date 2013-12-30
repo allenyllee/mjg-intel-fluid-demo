@@ -13,11 +13,8 @@
 #include "vorticityDistribution.h"
 #include "vortonSim.h"
 
-
-
-
 #if USE_TBB
-    unsigned gNumberOfProcessors = 8 ;  // Number of processors this machine has.
+    unsigned gNumberOfProcessors = 8 ;  ///< Number of processors this machine has.  This will get reassigned later.
 
     /*! \brief Function object to compute velocity grid using Threading Building Blocks
     */
@@ -32,6 +29,9 @@
             VortonSim_ComputeVelocityGrid_TBB( VortonSim * pVortonSim )
                 : mVortonSim( pVortonSim ) {}
     } ;
+
+
+
 
     /*! \brief Function object to advect passive tracer particles using Threading Building Blocks
     */
@@ -51,6 +51,116 @@
                 , mFrame( uFrame )
             {}
     } ;
+
+
+
+
+    /*! \brief Functor (function object) to find axis-aligned bounding box for all vortons in a vorton simulation.
+    */
+    class VortonSim_FindBoundingBoxVortons_TBB
+    {
+        public:
+            VortonSim_FindBoundingBoxVortons_TBB( VortonSim * pVortonSim )
+                : mVortonSim( pVortonSim )
+                , mMin( pVortonSim->mMinCorner )
+                , mMax( pVortonSim->mMaxCorner )
+            {}
+
+            // Special "map" copy constructor used by TBB
+            VortonSim_FindBoundingBoxVortons_TBB( VortonSim_FindBoundingBoxVortons_TBB & that , tbb::split )
+                : mVortonSim( that.mVortonSim )
+                , mMin( that.mMin )
+                , mMax( that.mMax )
+            {}
+
+            void operator() ( const tbb::blocked_range<size_t> & r )
+            {   // Advect subset of tracers.
+                const Vorton * pVortons = & mVortonSim->GetVortons()[0] ;
+                for( size_t iVorton = r.begin() ; iVorton < r.end() ; ++ iVorton )
+                {   // For each vorton in this simulation...
+                    const Vorton & rVorton = pVortons[ iVorton ] ;
+                    // Find corners of axis-aligned bounding box.
+                    UpdateBoundingBox( rVorton.mPosition ) ;
+                }
+            }
+
+            void join( const VortonSim_FindBoundingBoxVortons_TBB & other )
+            {   // Reduce the results of 2 threads
+                UpdateBoundingBox( other.mMin ) ;
+                UpdateBoundingBox( other.mMax ) ;
+            }
+
+            Vec3 mMin ; ///< Bounding box minimum corner for vortons visited by this thread
+            Vec3 mMax ; ///< Bounding box maximum corner for vortons visited by this thread
+
+        private:
+            void UpdateBoundingBox( const Vec3 & vPoint )
+            {
+                mMin.x = MIN2( mMin.x , vPoint.x ) ; // Note: TODO: Perhaps SSE/VMX have a SIMD/vector form of this operation.
+                mMin.y = MIN2( mMin.y , vPoint.y ) ;
+                mMin.z = MIN2( mMin.z , vPoint.z ) ;
+                mMax.x = MAX2( mMax.x , vPoint.x ) ;
+                mMax.y = MAX2( mMax.y , vPoint.y ) ;
+                mMax.z = MAX2( mMax.z , vPoint.z ) ;
+            }
+
+            VortonSim * mVortonSim ;    ///< Address of VortonSim object
+    } ;
+
+
+
+
+    /*! \brief Functor (function object) to find axis-aligned bounding box for all tracers in a vorton simulation.
+    */
+    class VortonSim_FindBoundingBoxTracers_TBB
+    {
+        public:
+            VortonSim_FindBoundingBoxTracers_TBB( VortonSim * pVortonSim )
+                : mVortonSim( pVortonSim )
+                , mMin( pVortonSim->mMinCorner )
+                , mMax( pVortonSim->mMaxCorner )
+            {}
+
+            // Special "map" copy constructor used by TBB
+            VortonSim_FindBoundingBoxTracers_TBB( VortonSim_FindBoundingBoxTracers_TBB & that , tbb::split )
+                : mVortonSim( that.mVortonSim )
+                , mMin( that.mMin )
+                , mMax( that.mMax )
+            {}
+
+            void operator() ( const tbb::blocked_range<size_t> & r )
+            {   // Advect subset of tracers.
+                const Particle * pTracers = & mVortonSim->GetTracers()[0] ;
+                for( size_t iTracer = r.begin() ; iTracer < r.end() ; ++ iTracer )
+                {   // For each passive tracer particle in this simulation...
+                    const Particle & rTracer = pTracers[ iTracer ] ;
+                    // Find corners of axis-aligned bounding box.
+                    UpdateBoundingBox( rTracer.mPosition ) ;
+                }
+            }
+
+            void join( const VortonSim_FindBoundingBoxTracers_TBB & other )
+            {   // Reduce the results of 2 threads
+                UpdateBoundingBox( other.mMin ) ;
+                UpdateBoundingBox( other.mMax ) ;
+            }
+
+            Vec3 mMin ; ///< Bounding box minimum corner for vortons visited by this thread
+            Vec3 mMax ; ///< Bounding box maximum corner for vortons visited by this thread
+
+        private:
+            void UpdateBoundingBox( const Vec3 & vPoint )
+            {
+                mMin.x = MIN2( mMin.x , vPoint.x ) ; // Note: TODO: Perhaps SSE/VMX have a SIMD/vector form of this operation.
+                mMin.y = MIN2( mMin.y , vPoint.y ) ;
+                mMin.z = MIN2( mMin.z , vPoint.z ) ;
+                mMax.x = MAX2( mMax.x , vPoint.x ) ;
+                mMax.y = MAX2( mMax.y , vPoint.y ) ;
+                mMax.z = MAX2( mMax.z , vPoint.z ) ;
+            }
+
+            VortonSim * mVortonSim ;    ///< Address of VortonSim object
+    } ;
 #endif
 
 
@@ -65,6 +175,12 @@
 
 
 
+DEBUG_ONLY( static unsigned sLeafHits = 0 ) ;                       // Number of times an influence-tree leaf-node was hit while calculating velocity.
+DEBUG_ONLY( static unsigned sDescents = 0 ) ;                       // Descents while traversing influence tree, calculating velocity.
+DEBUG_ONLY( static bool     bVerbose  = false ) ;
+
+
+
 /*! \brief Update axis-aligned bounding box corners to include given point
 
     \param vMinCorner - minimal corner of axis-aligned bounding box
@@ -74,14 +190,14 @@
     \param vPoint - point to include in bounding box
 
 */
-void UpdateBoundingBox( Vec3 & vMinCorner , Vec3 & vMaxCorner , const Vec3 vPoint )
+inline void VortonSim::UpdateBoundingBox( const Vec3 & vPoint )
 {
-    vMinCorner.x = MIN2( vPoint.x , vMinCorner.x ) ;
-    vMinCorner.y = MIN2( vPoint.y , vMinCorner.y ) ;
-    vMinCorner.z = MIN2( vPoint.z , vMinCorner.z ) ;
-    vMaxCorner.x = MAX2( vPoint.x , vMaxCorner.x ) ;
-    vMaxCorner.y = MAX2( vPoint.y , vMaxCorner.y ) ;
-    vMaxCorner.z = MAX2( vPoint.z , vMaxCorner.z ) ;
+    mMinCorner.x = MIN2( mMinCorner.x , vPoint.x ) ; // Note: TODO: Perhaps SSE/VMX have a SIMD/vector form of this operation.
+    mMinCorner.y = MIN2( mMinCorner.y , vPoint.y ) ;
+    mMinCorner.z = MIN2( mMinCorner.z , vPoint.z ) ;
+    mMaxCorner.x = MAX2( mMaxCorner.x , vPoint.x ) ;
+    mMaxCorner.y = MAX2( mMaxCorner.y , vPoint.y ) ;
+    mMaxCorner.z = MAX2( mMaxCorner.z , vPoint.z ) ;
 }
 
 
@@ -196,6 +312,9 @@ void VortonSim::Initialize( unsigned numTracersPerCellCubeRoot )
     {   // Environment contains a value for number of processors.
         gNumberOfProcessors = atoi( strNumberOfProcessors ) ;
     }
+    #if PROFILE
+    fprintf( stderr , "# CPU's: %u.  Built on " __DATE__ " " __TIME__ "\n" , gNumberOfProcessors ) ;
+    #endif
 #endif
 
     ConservedQuantities( mCirculationInitial , mLinearImpulseInitial ) ;
@@ -218,7 +337,37 @@ void VortonSim::Initialize( unsigned numTracersPerCellCubeRoot )
 
 
 
-/*! \brief Find axis-aligned bounding box for all vortons in this simulation.
+/*! \brief Find axis-aligned bounding box for a subset of all vortons in this simulation.
+*/
+inline void VortonSim::FindBoundingBoxVortonsSlice( size_t izStart , size_t izEnd )
+{
+    for( size_t iVorton = izStart ; iVorton < izEnd ; ++ iVorton )
+    {   // For each vorton in this simulation...
+        const Vorton & rVorton = mVortons[ iVorton ] ;
+        // Find corners of axis-aligned bounding box.
+        UpdateBoundingBox( rVorton.mPosition ) ;
+    }
+}
+
+
+
+
+/*! \brief Find axis-aligned bounding box for a subset of all tracers in this simulation.
+*/
+inline void VortonSim::FindBoundingBoxTracersSlice( size_t izStart , size_t izEnd )
+{
+    for( size_t iTracer = izStart ; iTracer < izEnd ; ++ iTracer )
+    {   // For each passive tracer particle in this simulation...
+        const Particle & rTracer = mTracers[ iTracer ] ;
+        // Find corners of axis-aligned bounding box.
+        UpdateBoundingBox( rTracer.mPosition ) ;
+    }
+}
+
+
+
+
+/*! \brief Find axis-aligned bounding box for all vortons and tracers in this simulation.
 */
 void VortonSim::FindBoundingBox( void )
 {
@@ -226,22 +375,36 @@ void VortonSim::FindBoundingBox( void )
     const size_t numVortons = mVortons.Size() ;
     mMinCorner.x = mMinCorner.y = mMinCorner.z =   FLT_MAX ;
     mMaxCorner = - mMinCorner ;
-    for( unsigned iVorton = 0 ; iVorton < numVortons ; ++ iVorton )
-    {   // For each vorton in this simulation...
-        const Vorton & rVorton = mVortons[ iVorton ] ;
-        // Find corners of axis-aligned bounding box.
-        UpdateBoundingBox( mMinCorner , mMaxCorner , rVorton.mPosition ) ;
+    #if USE_TBB
+    {
+        // Estimate grain size based on size of problem and number of processors.
+        const size_t grainSize =  MAX2( 1 , numVortons / gNumberOfProcessors ) ;
+        // Find bounding box of vortons using multiple threads.
+        VortonSim_FindBoundingBoxVortons_TBB fbbv( this ) ;
+        parallel_reduce( tbb::blocked_range<size_t>( 0 , numVortons , grainSize ) , fbbv ) ;
+        mMinCorner = fbbv.mMin ;
+        mMaxCorner = fbbv.mMax ;
     }
+    #else
+        FindBoundingBoxVortonsSlice( 0 , numVortons ) ;
+    #endif
     QUERY_PERFORMANCE_EXIT( VortonSim_CreateInfluenceTree_FindBoundingBox_Vortons ) ;
 
     QUERY_PERFORMANCE_ENTER ;
     const size_t numTracers = mTracers.Size() ;
-    for( unsigned iTracer = 0 ; iTracer < numTracers ; ++ iTracer )
-    {   // For each passive tracer particle in this simulation...
-        const Particle & rTracer = mTracers[ iTracer ] ;
-        // Find corners of axis-aligned bounding box.
-        UpdateBoundingBox( mMinCorner , mMaxCorner , rTracer.mPosition ) ;
+    #if USE_TBB
+    {
+        // Estimate grain size based on size of problem and number of processors.
+        const size_t grainSize =  MAX2( 1 , numTracers / gNumberOfProcessors ) ;
+        // Potentially expand bounding box to include tracers, using multiple threads.
+        VortonSim_FindBoundingBoxTracers_TBB fbbt( this ) ;
+        parallel_reduce( tbb::blocked_range<size_t>( 0 , numTracers , grainSize ) , fbbt ) ;
+        mMinCorner = fbbt.mMin ;
+        mMaxCorner = fbbt.mMax ;
     }
+    #else
+        FindBoundingBoxTracersSlice( 0 , numTracers ) ;
+    #endif
     QUERY_PERFORMANCE_EXIT( VortonSim_CreateInfluenceTree_FindBoundingBox_Tracers ) ;
 
     // Slightly enlarge bounding box to allow for round-off errors.
@@ -663,7 +826,7 @@ void VortonSim::ComputeVelocityGrid( void )
 
 #if USE_TBB
     // Estimate grain size based on size of problem and number of processors.
-    const unsigned grainSize =  MAX2( 1 , numZ / gNumberOfProcessors ) ;
+    const size_t grainSize =  MAX2( 1 , numZ / gNumberOfProcessors ) ;
     // Compute velocity grid using multiple threads.
     parallel_for( tbb::blocked_range<size_t>( 0 , numZ , grainSize ) , VortonSim_ComputeVelocityGrid_TBB( this ) ) ;
 #else

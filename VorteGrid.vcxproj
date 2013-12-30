@@ -67,8 +67,8 @@
     <OutDir Condition="'$(Configuration)|$(Platform)'=='ProfileWithoutTbb|Win32'">$(SolutionName)\$(Configuration)\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='ProfileWithoutTbb|Win32'">$(SolutionName)\$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ProfileWithoutTbb|Win32'">false</LinkIncremental>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">$(Configuration)\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">$(Configuration)\</IntDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">$(SolutionName)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">$(SolutionName)\$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">false</LinkIncremental>
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
@@ -82,17 +82,13 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\include;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\lib\ia32\vc10;$(LibraryPath)</LibraryPath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\include\;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\lib\ia32\vc10;$(LibraryPath)</LibraryPath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\include;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='ProfileWithTbb|Win32'">D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\lib\ia32\vc10;$(LibraryPath)</LibraryPath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TBBROOT)\include;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TBBROOT)\lib\$(TBB_ARCH_PLATFORM);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(TBB21_INSTALL_DIR)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(TBBROOT)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;TBB_USE_DEBUG;USE_TBB=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>
@@ -100,7 +96,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib;External;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(TBBROOT)\lib\$(TBB_ARCH_PLATFORM);External;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -120,7 +116,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb_debug.dll" "$(OutDir)"
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>$(TBB21_INSTALL_DIR)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(TBBROOT)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;USE_TBB=1;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -133,7 +129,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb_debug.dll" "$(OutDir)"
     </ClCompile>
     <Link>
       <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalLibraryDirectories>$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib;External;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(TBBROOT)\lib\$(TBB_ARCH_PLATFORM);External;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -157,7 +153,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;USE_TBB=0;PROFILE;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;USE_TBB=0;PROFILE=2;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -190,7 +186,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalIncludeDirectories>$(TBB21_INSTALL_DIR)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;PROFILE;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;PROFILE=2;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>false</FunctionLevelLinking>
@@ -212,7 +208,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
     <PostBuildEvent>
       <Message>Copying DLLs</Message>
       <Command>copy "External\glut32.dll" "$(OutDir)"
-copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
+copy "$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll"  "$(OutDir)"
 
 </Command>
     </PostBuildEvent>

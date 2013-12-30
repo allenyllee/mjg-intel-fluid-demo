@@ -27,3 +27,22 @@
 # define GL_PROXY_TEXTURE_CUBE_MAP_EXT       0x851B
 # define GL_MAX_CUBE_MAP_TEXTURE_SIZE_EXT    0x851C
 #endif
+
+#include <stddef.h>
+
+typedef ptrdiff_t GLintptr;
+typedef ptrdiff_t GLsizeiptr;
+typedef ptrdiff_t GLintptrARB;
+typedef ptrdiff_t GLsizeiptrARB;
+
+#define GLAPI extern
+#define GL_ARRAY_BUFFER                   0x8892
+#define GL_STREAM_DRAW                    0x88E0
+#define GL_WRITE_ONLY                     0x88B9
+
+typedef void (APIENTRY * PFN_GL_BINDBUFFERARB_PROC) (GLenum target, GLuint buffer);
+typedef void (APIENTRY * PFN_GL_DELETEBUFFERSARB_PROC) (GLsizei n, const GLuint *buffers);
+typedef void (APIENTRY * PFN_GL_GENBUFFERSARB_PROC) (GLsizei n, GLuint *buffers);
+typedef void (APIENTRY * PFN_GL_BUFFERDATAARB_PROC) (GLenum target, int size, const GLvoid *data, GLenum usage);
+typedef void * (APIENTRY * PFN_GL_MAPBUFFERARB_PROC ) (GLenum, GLenum) ;
+typedef GLboolean ( APIENTRY * PFN_GL_UNMAPBUFFERARB_PROC ) (GLenum);

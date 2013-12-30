@@ -137,7 +137,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot;  &quot;$(OutDir)&qu
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories=".\;External"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;USE_TBB=0;PROFILE;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;USE_TBB=0;PROFILE=2;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="FALSE"
 				EnableEnhancedInstructionSet="2"
@@ -184,8 +184,8 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot;  &quot;$(OutDir)&qu
 		</Configuration>
 		<Configuration
 			Name="ProfileWithTbb|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			OutputDirectory="$(SolutionName)\$(ConfigurationName)"
+			IntermediateDirectory="$(SolutionName)\$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="2">
 			<Tool
@@ -196,7 +196,7 @@ copy &quot;$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll&quot;  &quot;$(OutDir)&qu
 				EnableIntrinsicFunctions="TRUE"
 				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="$(TBB21_INSTALL_DIR)\include;.\;External"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;PROFILE;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;PROFILE=2;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="FALSE"
 				EnableFunctionLevelLinking="FALSE"

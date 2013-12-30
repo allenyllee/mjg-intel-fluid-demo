@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VorteGrid", "VorteGrid.vcxproj", "{C64078BC-8A63-4C3D-B48D-ECC2B60E75E6}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CB013154-CFC7-488B-8E24-372856FD690B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F0E5F582-6C2D-48A6-8049-7EC189F9A8CC}"
 	ProjectSection(SolutionItems) = preProject
 		READ_ME_FIRST.txt = READ_ME_FIRST.txt
 	EndProjectSection
