@@ -185,7 +185,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>$(TBB21_INSTALL_DIR)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(TBBROOT)\include;.\;External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;PROFILE=2;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_HAS_ITERATOR_DEBUGGING=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -197,7 +197,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
     </ClCompile>
     <Link>
       <AdditionalOptions>/LTCG %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalLibraryDirectories>$(TBB21_INSTALL_DIR)\ia32\vc7.1\lib;External;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(TBBROOT)\lib\$(TBB_ARCH_PLATFORM);External;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -208,7 +208,7 @@ copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
     <PostBuildEvent>
       <Message>Copying DLLs</Message>
       <Command>copy "External\glut32.dll" "$(OutDir)"
-copy "$(TBB21_INSTALL_DIR)\ia32\vc7.1\bin\tbb.dll"  "$(OutDir)"
+copy "$(TBB_BIN_DIR)\$(TBB_ARCH_PLATFORM)\tbb.dll"  "$(OutDir)"
 
 </Command>
     </PostBuildEvent>
