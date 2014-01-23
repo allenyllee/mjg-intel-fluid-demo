@@ -1,0 +1,26 @@
+﻿Build started 2014/1/23 下午 05:58:14.
+     1>Project "D:\igs\Project\repos\Bitbucket\C++\mjg_intel_fluid_demo\VorteGrid.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "VorteGrid\Release\VorteGrid.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         All outputs are up-to-date.
+       Link:
+         All outputs are up-to-date.
+         VorteGrid.vcxproj -> D:\igs\Project\repos\Bitbucket\C++\mjg_intel_fluid_demo\VorteGrid\Release\VorteGrid.exe
+       PostBuildEvent:
+         Description: Copying DLLs
+         copy "External\glut32.dll" "VorteGrid\Release\"
+         copy "D:\igs\Project\Library\Intel\ThreadingBuildingBlocks\tbb42_20131118oss\bin\ia32\vc10\tbb.dll"  "VorteGrid\Release\"
+         
+         
+         :VCEnd
+         複製了         1 個檔案。
+         複製了         1 個檔案。
+       FinalizeBuildStatus:
+         Deleting file "VorteGrid\Release\VorteGrid.unsuccessfulbuild".
+         Touching "VorteGrid\Release\VorteGrid.lastbuildstate".
+     1>Done Building Project "D:\igs\Project\repos\Bitbucket\C++\mjg_intel_fluid_demo\VorteGrid.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.05
